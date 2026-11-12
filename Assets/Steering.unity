@@ -391,7 +391,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IncompletoBot
   target: {fileID: 73510360}
-  currentState: 2
+  currentState: 4
+  wanderRadius: 2.46
+  wanderDistance: 4.33
+  wanderJitter: 2
+  wanderAccuracy: 0.2
+  visAngle: 30
+  visDist: 10
 --- !u!850595691 &445805236
 LightingSettings:
   m_ObjectHideFlags: 0

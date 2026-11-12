@@ -11,6 +11,16 @@ public class IncompletoBot : MonoBehaviour
     public enum State { Hide, Pursue, Evade, Wander, Complex };
     public State currentState = State.Hide;
 
+    [Header("Wander Settings")]
+    public float wanderRadius;
+    public float wanderDistance;
+    public float wanderJitter;
+    public float wanderAccuracy;
+
+    [Header("Visibility Settings")]
+    public float visAngle = 30;
+    public float visDist = 10;
+
     void Awake()
     {
         agent = this.GetComponent<NavMeshAgent>();
@@ -18,13 +28,15 @@ public class IncompletoBot : MonoBehaviour
 
     void Seek(Vector3 location)
     {
-        //TODO
+        agent.speed = 3.5f;
+        agent.SetDestination(location);
     }
     //En seek ponemos como destino la posicion del target, en Flee (huir) ponemos como
     //destino la posicion del target en negativo para que vaya huyendo de esa posicion
     void Flee(Vector3 location)
     {
-       //TODO
+        agent.speed = 5.25f;
+        agent.SetDestination(location);
     }
 
     void Pursue()
@@ -74,9 +86,20 @@ public class IncompletoBot : MonoBehaviour
 	//tanto no puede ser local al metodo.
     Vector3 wanderTarget = Vector3.zero; //Se actualiza cada vez que el agente
 										 //tiene un nuevo valor en su posicion
+    Vector3 targetPos = Vector3.zero;
     void Wander()
     {
-        //TODO
+        agent.speed = 3.5f;
+        if (agent.destination != targetPos)
+            targetPos = transform.position;
+        float distance = Vector3.Distance(transform.position, targetPos);
+        if (distance <= wanderAccuracy)
+        {
+            wanderTarget += new Vector3(Random.Range(-1, 1) * wanderJitter, 0f, Random.Range(-1, 1) * wanderJitter);
+            wanderTarget = wanderTarget.normalized * wanderRadius;
+            targetPos = transform.position + agent.velocity * wanderDistance + wanderTarget;
+            agent.SetDestination(targetPos);
+        }
     }
 
     void Hide()
@@ -109,7 +132,15 @@ public class IncompletoBot : MonoBehaviour
 
     bool CanSeeTarget()
     {
-        //TODO
+        Vector3 targetDirection = target.transform.position - transform.position;
+        targetDirection = targetDirection.normalized;
+        float currentAngle = Vector3.Angle(targetDirection, transform.forward);
+        float distance = Vector3.Distance(transform.position, target.transform.position);
+        if (currentAngle <= visAngle && distance <= visDist)
+        {
+            Debug.Log(gameObject.name + " can see player");
+            return true;
+        }
         return false;
     }
 
@@ -117,7 +148,15 @@ public class IncompletoBot : MonoBehaviour
     //Tenemos que decidir cuando el cop ve al rubber, digamos que esto sucede si esta en su angulo de vision (p.e. 60�)
     bool TargetCanSeeMe()
     {
-        //TODO
+        Vector3 targetDirection = transform.position - target.transform.position;
+        targetDirection = targetDirection.normalized;
+        float currentAngle = Vector3.Angle(targetDirection, target.transform.forward);
+        float distance = Vector3.Distance(target.transform.position, transform.position);
+        if (currentAngle <= visAngle && distance <= visDist)
+        {
+            Debug.Log(target.name + " can see " + gameObject.name);
+            return true;
+        }
         return false;
     }
 
@@ -137,14 +176,28 @@ public class IncompletoBot : MonoBehaviour
                 Evade();
                 break;
             case State.Wander:
-
+                Wander();
                 break;
             case State.Complex:
-
+                if (CanSeeTarget() && !TargetCanSeeMe())
+                    Seek(target.transform.position);
+                if (TargetCanSeeMe())
+                    Flee(target.transform.position * -1);
+                if (!CanSeeTarget() && !TargetCanSeeMe())
+                    Wander();
                 break;
             default:
                 Debug.LogError(gameObject.name + "'s Current State is not a valid state");
                 break;
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (currentState == State.Wander || currentState == State.Complex)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position + (transform.forward * wanderDistance), wanderRadius);
         }
     }
 }
