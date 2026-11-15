@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem;
 
 public class IncompletoBot : MonoBehaviour
 {
@@ -21,9 +22,12 @@ public class IncompletoBot : MonoBehaviour
     public float visAngle = 30;
     public float visDist = 10;
 
+    private bool isCorrectingDestination = false;
+
     void Awake()
     {
         agent = this.GetComponent<NavMeshAgent>();
+        GetComponent<BotStateDisplay>().UpdateStateDisplay(currentState);
     }
 
     void Seek(Vector3 location)
@@ -77,6 +81,7 @@ public class IncompletoBot : MonoBehaviour
             Vector3 futurePos = target.transform.position + (targetDirection * newT);
             Vector3 evasivePos = transform.position - futurePos;
             agent.SetDestination(evasivePos);
+            if (agent.destination != evasivePos) CorrectAgentOutOfBounds();
         }
         agent.isStopped = false;
     }
@@ -99,6 +104,7 @@ public class IncompletoBot : MonoBehaviour
             wanderTarget = wanderTarget.normalized * wanderRadius;
             targetPos = transform.position + agent.velocity * wanderDistance + wanderTarget;
             agent.SetDestination(targetPos);
+            if (targetPos != agent.destination) CorrectAgentOutOfBounds();
         }
     }
 
@@ -161,9 +167,37 @@ public class IncompletoBot : MonoBehaviour
     }
 
 
+    void CorrectAgentOutOfBounds()
+    {
+        if (isCorrectingDestination) return;
+        isCorrectingDestination = true;
+        Vector3 direction = agent.destination - transform.position;
+        Vector3 correctedPos = transform.position + ((direction.normalized * wanderDistance) * -1);
+        agent.SetDestination(correctedPos);
+        currentRoutine = CheckForCorrectedDestination(correctedPos);
+        StartCoroutine(currentRoutine);
+    }
+    
+    IEnumerator currentRoutine;
+    IEnumerator CheckForCorrectedDestination(Vector3 pos)
+    {
+        float distance = Mathf.Infinity;
+        while (distance > wanderAccuracy)
+        {
+            distance = Vector3.Distance(pos, transform.position);
+            yield return new WaitForEndOfFrame();
+        }
+        isCorrectingDestination = false;
+        StopCoroutine(currentRoutine);
+    }
+
     // Update is called once per frame
     void Update()
     {
+        SwapState();
+
+        if (isCorrectingDestination) return;
+
         switch (currentState)
         {
             case State.Hide:
@@ -190,6 +224,26 @@ public class IncompletoBot : MonoBehaviour
                 Debug.LogError(gameObject.name + "'s Current State is not a valid state");
                 break;
         }
+    }
+
+    void SwapState()
+    {
+        if (Input.GetKeyDown(KeyCode.H))
+            SwapToState(State.Hide);
+        if (Input.GetKeyDown(KeyCode.P))
+            SwapToState(State.Pursue);
+        if (Input.GetKeyDown(KeyCode.E))
+            SwapToState(State.Evade);
+        if (Input.GetKeyDown(KeyCode.R))
+            SwapToState(State.Wander);
+        if (Input.GetKeyDown(KeyCode.C))
+            SwapToState(State.Complex);
+    }
+
+    void SwapToState(State state)
+    {
+        currentState = state;
+        GetComponent<BotStateDisplay>().UpdateStateDisplay(state);
     }
 
     private void OnDrawGizmos()
