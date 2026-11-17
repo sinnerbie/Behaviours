@@ -6,9 +6,11 @@ public class BotStateDisplay : MonoBehaviour
     [SerializeField] GameObject _canvas;
     [SerializeField] TMP_Text text;
 
-    void Update()
+    Quaternion targetRot = Quaternion.Euler(90, 0, 0);
+
+    private void LateUpdate()
     {
-        _canvas.transform.LookAt(Camera.main.transform);
+        _canvas.transform.rotation = targetRot;
     }
 
     public void UpdateStateDisplay(IncompletoBot.State state)

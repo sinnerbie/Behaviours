@@ -11,6 +11,7 @@ public class IncompletoBot : MonoBehaviour
     
     public enum State { Hide, Pursue, Evade, Wander, Complex };
     public State currentState = State.Hide;
+    public State originalState;
 
     [Header("Wander Settings")]
     public float wanderRadius;
@@ -28,6 +29,11 @@ public class IncompletoBot : MonoBehaviour
     {
         agent = this.GetComponent<NavMeshAgent>();
         GetComponent<BotStateDisplay>().UpdateStateDisplay(currentState);
+    }
+
+    void Start()
+    {
+        originalState = currentState;
     }
 
     void Seek(Vector3 location)
@@ -238,6 +244,8 @@ public class IncompletoBot : MonoBehaviour
             SwapToState(State.Wander);
         if (Input.GetKeyDown(KeyCode.C))
             SwapToState(State.Complex);
+        if (Input.GetKeyDown(KeyCode.Space))
+            SwapToState(originalState);
     }
 
     void SwapToState(State state)
